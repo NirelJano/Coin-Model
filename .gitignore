@@ -1,0 +1,15 @@
+*.pth
+*.pt
+*.tfevents.*
+*.log
+__pycache__/
+output/
+venv/
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.zip
+.DS_Store
+*.ckpt
+*.json
