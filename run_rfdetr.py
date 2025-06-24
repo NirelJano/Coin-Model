@@ -8,7 +8,7 @@ MODEL_PATH = "/Users/innadaymand/Desktop/coin model/results/output/checkpoint_be
 IMAGE_PATH = "/Users/innadaymand/Desktop/coin model/coins test/IMG_4547.jpeg"
 
 # === שמות הקלאסים (עדכון לפי הסדר שלך!) ===
-CLASS_NAMES = ["Five", "Ten", "One", 'Two', "0.5Shekel"]
+CLASS_NAMES = ["Five", "Ten", "One", 'Two', 'Half', 'Quarter', 'Twenty', 'Fifty', 'Hundred', 'TwoHundred']
 
 # === טען את המודל ===
 model = RFDETRBase(pretrain_weights=MODEL_PATH)
