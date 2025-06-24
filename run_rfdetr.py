@@ -4,11 +4,11 @@ import torch
 import numpy as np
 
 # === הגדרות נתיב ===
-MODEL_PATH = "/Users/innadaymand/Desktop/coin model/results/output/checkpoint_best_ema.pth"
-IMAGE_PATH = "/Users/innadaymand/Desktop/coin model/coins test/IMG_4547.jpeg"
+MODEL_PATH = "/Users/innadaymand/Documents/GitHub/Coin-Model/results/output/checkpoint_best_ema.pth"
+IMAGE_PATH = "/Users/innadaymand/Documents/GitHub/Coin-Model/coins test/IMG_9200.jpeg"
 
 # === שמות הקלאסים (עדכון לפי הסדר שלך!) ===
-CLASS_NAMES = ["Five", "Ten", "One", 'Two', 'Half', 'Quarter', 'Twenty', 'Fifty', 'Hundred', 'TwoHundred']
+CLASS_NAMES = ["Five", "Ten", "One", 'Two', 'Half']
 
 # === טען את המודל ===
 model = RFDETRBase(pretrain_weights=MODEL_PATH)
