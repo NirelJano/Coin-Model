@@ -16,7 +16,7 @@ model = RFDETRBase(
     pretrain_weights="checkpoint_best_ema.pth"
 )
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 if not cap.isOpened():
     print("לא הצליח לפתוח את מצלמת הרשת")
     exit()
