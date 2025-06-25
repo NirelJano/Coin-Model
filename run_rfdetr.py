@@ -3,16 +3,8 @@ import supervision as sv
 import os
 from PIL import Image
 from rfdetr import RFDETRBase
+from constants import CUSTOM_CLASSES
 
-# הגדרת המחלקות התואמות לדאטהסט שלך
-# הסדר חשוב - הוא צריך להתאים לאיך שהמודל אומן
-CUSTOM_CLASSES = [
-  None,     # אינדקס 0
-  "Five",   # אינדקס 1
-  "One",    # אינדקס 2
-  "Ten",    # אינדקס 3
-  "Two",    # אינדקס 4
-]
 def main(image_path: str, weights_path: str, threshold: float):
     """
     Runs object detection on an image and displays the annotated result.
@@ -23,8 +15,11 @@ def main(image_path: str, weights_path: str, threshold: float):
         threshold (float): Detection confidence threshold.
     """
     # 1. טען את המודל עם המשקולות
+    if not os.path.exists(weights_path):
+        print(f"Error: Weights file not found at {weights_path}")
+        return
     print("Loading model...")
-    model = RFDETRBase(pretrain_weights=weights_path,num_classes=4)
+    model = RFDETRBase(pretrain_weights=weights_path, num_classes=len(CUSTOM_CLASSES) - 1)
 
     # 2. טען תמונה
     print(f"Loading image from: {image_path}")
@@ -33,7 +28,6 @@ def main(image_path: str, weights_path: str, threshold: float):
     # 3. בצע ניבוי
     print("Running prediction...")
     detections = model.predict(image, threshold=threshold)
-
     # 4. הגדר תוויות
     labels = [
         f"{CUSTOM_CLASSES[class_id]} {confidence:.2f}"
@@ -74,13 +68,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--image-path",
         type=str,
-        default="/Users/shachafemanoel/Documents/Coin-Model/coins test/IMG_9200.jpeg",
+        required=True,
         help="Path to the input image.",
     )
     parser.add_argument(
         "--weights-path",
         type=str,
-        default="/Users/shachafemanoel/Documents/Coin-Model/checkpoint_best_ema.pth",
+        required=True,
         help="Path to the model weights.",
     )
     parser.add_argument(
