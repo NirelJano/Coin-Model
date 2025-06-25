@@ -1,9 +1,21 @@
-import argparse
 import supervision as sv
 import os
+import sys
+import numpy as np
+import cv2
 from PIL import Image
 from rfdetr import RFDETRBase
-from constants import CUSTOM_CLASSES
+
+# Add the script's directory to the Python path to ensure robust imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from constants import CUSTOM_CLASSES, COIN_VALUES
+
+# --- Configuration ---
+# הגדר כאן את הנתיבים והפרמטרים הרצויים
+WEIGHTS_PATH = "checkpoint_best_ema.pth"
+IMAGE_PATH = "coins test/IMG_9200.jpeg"
+CONFIDENCE_THRESHOLD = 0.4
+# ---------------------
 
 def main(image_path: str, weights_path: str, threshold: float):
     """
@@ -28,14 +40,22 @@ def main(image_path: str, weights_path: str, threshold: float):
     # 3. בצע ניבוי
     print("Running prediction...")
     detections = model.predict(image, threshold=threshold)
-    # 4. הגדר תוויות
+    min_conf = 0.5
+    detections = detections[detections.confidence > min_conf]
+
+    # 4. חשב את הסכום הכולל של המטבעות שזוהו
+    total_sum = sum(COIN_VALUES.get(CUSTOM_CLASSES[class_id], 0) for class_id in detections.class_id)
+    sum_text = f"Total Sum: {total_sum} ILS"
+    print(sum_text)
+
+    # 5. הגדר תוויות לכל זיהוי
     labels = [
         f"{CUSTOM_CLASSES[class_id]} {confidence:.2f}"
         for class_id, confidence
         in zip(detections.class_id, detections.confidence)
     ]
 
-    # 5. אתר וסמן את התמונה
+    # 6. אתר וסמן את התמונה
     print("Annotating image...")
     # חישוב פרמטרים אופטימליים לאנוטציה
     text_scale = sv.calculate_optimal_text_scale(resolution_wh=image.size)
@@ -49,40 +69,43 @@ def main(image_path: str, weights_path: str, threshold: float):
         smart_position=True
     )
 
-    annotated_image = image.copy()
-    annotated_image = box_annotator.annotate(annotated_image, detections)
-    annotated_image = label_annotator.annotate(annotated_image, detections, labels=labels)
+    # המרת תמונת PIL למערך NumPy עבור אנוטציה
+    annotated_frame = np.array(image.copy())
+    annotated_frame = box_annotator.annotate(annotated_frame, detections)
+    annotated_frame = label_annotator.annotate(annotated_frame, detections, labels=labels)
 
-    # 6. הצג את התמונה
+    # הוספת טקסט הסכום הכולל במרכז התמונה
+    font_scale_for_sum = text_scale * 1.5
+    (text_width, text_height), _ = cv2.getTextSize(
+        text=sum_text,
+        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        fontScale=font_scale_for_sum,
+        thickness=thickness
+    )
+    image_width, _ = image.size
+    text_x = (image_width - text_width) // 2
+    text_y = 60  # Padding from the top
+
+    annotated_frame = sv.draw_text(
+        scene=annotated_frame,
+        text=sum_text,
+        text_anchor=sv.Point(x=text_x, y=text_y),
+        text_color=sv.Color.BLACK,
+        text_scale=font_scale_for_sum,
+        text_thickness=thickness,
+        background_color=sv.Color.WHITE
+    )
+
+    # 7. הצג את התמונה
     print("Displaying result.")
-    sv.plot_image(annotated_image)
+    sv.plot_image(annotated_frame)
 
-    # 7. שמור את התמונה
+    # 8. שמור את התמונה
+    final_image_pil = Image.fromarray(annotated_frame)
     base_name, ext = os.path.splitext(image_path)
     output_path = f"{base_name}_annotated{ext}"
-    annotated_image.save(output_path)
+    final_image_pil.save(output_path)
     print(f"Annotated image saved to: {output_path}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run RF-DETR object detection.")
-    parser.add_argument(
-        "--image-path",
-        type=str,
-        required=True,
-        help="Path to the input image.",
-    )
-    parser.add_argument(
-        "--weights-path",
-        type=str,
-        required=True,
-        help="Path to the model weights.",
-    )
-    parser.add_argument(
-        "--threshold",
-        type=float,
-        default=0.5,
-        help="Detection confidence threshold.",
-    )
-    args = parser.parse_args()
-    
-    main(args.image_path, args.weights_path, args.threshold)
+    main(IMAGE_PATH, WEIGHTS_PATH, CONFIDENCE_THRESHOLD)

@@ -10,13 +10,28 @@ CUSTOM_CLASSES = [
   "Two",
 ]
 
+# הוספת מילון לערכי המטבעות
+COIN_VALUES = {
+    "One": 1,
+    "Two": 2,
+    "Five": 5,
+    "Ten": 10
+}
+
 # טען את המודל עם num_classes נכון
 model = RFDETRBase(
     num_classes=4,
     pretrain_weights="checkpoint_best_ema.pth"
 )
 
-cap = cv2.VideoCapture(1)
+# אתחול העוקב
+tracker = sv.ByteTrack()
+
+# אתחול משתנים לסכימה
+counted_coins = {} # מילון לשמירת המטבעות שנספרו, עם tracker_id כמפתח
+total_sum = 0
+
+cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("לא הצליח לפתוח את מצלמת הרשת")
     exit()
@@ -35,10 +50,24 @@ while True:
     min_conf = 0.5
     detections = detections[detections.confidence > min_conf]
 
-    # הכנת תוויות
+    # עדכון העוקב עם הזיהויים החדשים
+    detections = tracker.update_with_detections(detections)
+
+    # חישוב הסכום ומניעת ספירה כפולה
+    for class_id, tracker_id in zip(detections.class_id, detections.tracker_id):
+        # בדוק אם המטבע הזה (עם ה-tracker_id שלו) כבר נספר
+        if tracker_id not in counted_coins:
+            coin_name = CUSTOM_CLASSES[class_id]
+            if coin_name in COIN_VALUES:
+                coin_value = COIN_VALUES[coin_name]
+                counted_coins[tracker_id] = coin_value
+                # עדכן את הסכום הכולל
+                total_sum = sum(counted_coins.values())
+
+    # הכנת תוויות עם tracker_id
     labels = [
-        f"{CUSTOM_CLASSES[cid]} {conf:.2f}"
-        for cid, conf in zip(detections.class_id, detections.confidence)
+        f"#{tid} {CUSTOM_CLASSES[cid]} {conf:.2f}"
+        for cid, conf, tid in zip(detections.class_id, detections.confidence, detections.tracker_id)
     ]
 
     # אנוטציה
@@ -54,6 +83,10 @@ while True:
 
     annotated = boxer.annotate(frame, detections)
     annotated = liner.annotate(annotated, detections, labels)
+
+    # הצגת הסכום הכולל על המסך
+    sum_text = f"Total Sum: {total_sum} ILS"
+    cv2.putText(annotated, sum_text, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3, cv2.LINE_AA)
 
     cv2.imshow("Webcam", annotated)
     if cv2.waitKey(1) & 0xFF == ord('q'):
